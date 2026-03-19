@@ -35,15 +35,27 @@ wandb login --relogin "$WANDB_API_KEY"
 
 DATASET_DIR="${DATASET_DIR:-}"
 
-# Ignore placeholder values often copied from examples.
-if [[ "$DATASET_DIR" == *"your/actual"* ]] || [[ "$DATASET_DIR" == "/your/actual/lora_dataset_folder" ]]; then
+# Ignore common placeholder values and fall back to auto-discovery.
+case "${DATASET_DIR}" in
+  ""|"/your/actual/lora_dataset_folder"|"/path/to/lora_dataset"|"CHANGE_ME")
+    DATASET_DIR=""
+    ;;
+esac
+
+if [ -n "$DATASET_DIR" ] && [ ! -d "$DATASET_DIR" ]; then
+  echo "Provided DATASET_DIR does not exist: $DATASET_DIR"
+  echo "Falling back to automatic dataset discovery..."
   DATASET_DIR=""
 fi
 
 if [ -z "$DATASET_DIR" ]; then
   for p in \
     /teamspace/datasets/lora_2025 \
+    /teamspace/datasets/lora \
+    /teamspace/datasets \
     /teamspace/studios/this_studio/datasets/lora_2025 \
+    /teamspace/studios/this_studio/datasets/lora \
+    /teamspace/studios/this_studio/datasets \
     /teamspace/studios/this_studio/data/lora_2025
   do
     if [ -d "$p" ]; then
@@ -54,17 +66,12 @@ if [ -z "$DATASET_DIR" ]; then
 fi
 
 if [ -z "$DATASET_DIR" ]; then
-  SAMPLE_NPY="$(find /teamspace -maxdepth 8 -type f -path '*/device_*/*.npy' 2>/dev/null | head -n 1 || true)"
-  if [ -n "$SAMPLE_NPY" ]; then
-    DATASET_DIR="$(dirname "$(dirname "$SAMPLE_NPY")")"
-  fi
+  DATASET_DIR="$(find /teamspace -maxdepth 5 -type d \( -iname '*lora*' -o -iname '*rffi*' -o -iname '*dataset*' \) 2>/dev/null | head -n 1 || true)"
 fi
 
 if [ -z "$DATASET_DIR" ]; then
   echo "No LoRa dataset directory found under /teamspace"
-  echo "Expected layout: <root>/device_0/*.npy, <root>/device_1/*.npy, ..."
-  echo "Try: find /teamspace -maxdepth 8 -type f -path '*/device_*/*.npy' | head"
-  echo "Then rerun with: export DATASET_DIR=\"<root_that_contains_device_folders>\""
+  echo "Run: find /teamspace -maxdepth 4 -type d | grep -Ei 'lora|dataset|rffi'"
   exit 1
 fi
 
