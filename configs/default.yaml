@@ -1,0 +1,39 @@
+data:
+  root_dir: "/teamspace/datasets/lora_2025"
+  file_glob: "device_*/*.npy"
+  representation: "stft"
+  sample_rate: 1000000
+  target_iq_len: 4096
+  stft_nperseg: 256
+  stft_noverlap: 128
+  stft_nfft: 256
+  max_files_per_device: 0
+  calibration_ratio: 0.15
+
+train:
+  epochs: 20
+  batch_size: 128
+  lr: 0.0003
+  weight_decay: 0.0001
+  num_workers: 8
+  grad_accum_steps: 1
+  compile_model: true
+  channels_last: true
+  amp_dtype: "bf16"
+  deterministic: false
+  seed: 42
+  log_every: 25
+
+model:
+  num_classes: 20
+  embedding_dim: 128
+  width_mult: 1.0
+  top_k: 3
+  score_alpha: 0.25
+
+runtime:
+  output_dir: "outputs"
+  run_name: "mctv_l4"
+  use_wandb: true
+  wandb_project: "lora-open-set-rffi"
+  wandb_entity: ""
