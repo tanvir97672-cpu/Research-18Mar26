@@ -16,13 +16,19 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 pip install wandb pyyaml
 
+NETRC_FILE="${HOME}/.netrc"
 if [ -z "${WANDB_API_KEY:-}" ]; then
-  read -rsp "Enter NEW WandB API Key: " WANDB_API_KEY
-  echo
-  export WANDB_API_KEY
+  if [ -f "$NETRC_FILE" ] && grep -q "api.wandb.ai" "$NETRC_FILE"; then
+    echo "Found existing W&B login in $NETRC_FILE, continuing without prompt."
+  else
+    read -rsp "Enter NEW WandB API Key: " WANDB_API_KEY
+    echo
+    export WANDB_API_KEY
+  fi
 fi
 
-python - << 'PY'
+if [ -n "${WANDB_API_KEY:-}" ]; then
+  python - << 'PY'
 import os, re, sys
 k = os.environ.get("WANDB_API_KEY", "").strip()
 if not re.fullmatch(r"[A-Za-z0-9_]{40,}", k):
@@ -30,8 +36,10 @@ if not re.fullmatch(r"[A-Za-z0-9_]{40,}", k):
     sys.exit(1)
 print("WANDB_API_KEY format ok")
 PY
-
-wandb login --relogin "$WANDB_API_KEY"
+  wandb login --relogin "$WANDB_API_KEY"
+else
+  echo "WANDB_API_KEY not provided, using existing wandb credentials from netrc."
+fi
 
 DATASET_DIR="${DATASET_DIR:-}"
 
@@ -48,17 +56,19 @@ if [ -n "$DATASET_DIR" ] && [ ! -d "$DATASET_DIR" ]; then
   DATASET_DIR=""
 fi
 
+if [ -n "$DATASET_DIR" ] && ! find "$DATASET_DIR" -maxdepth 3 -type f -path "*/device_*/*.npy" | head -n 1 | grep -q .; then
+  echo "Provided DATASET_DIR does not contain expected device_*/.npy layout: $DATASET_DIR"
+  echo "Falling back to automatic dataset discovery..."
+  DATASET_DIR=""
+fi
+
 if [ -z "$DATASET_DIR" ]; then
   for p in \
     /teamspace/datasets/lora_2025 \
-    /teamspace/datasets/lora \
-    /teamspace/datasets \
     /teamspace/studios/this_studio/datasets/lora_2025 \
-    /teamspace/studios/this_studio/datasets/lora \
-    /teamspace/studios/this_studio/datasets \
     /teamspace/studios/this_studio/data/lora_2025
   do
-    if [ -d "$p" ]; then
+    if [ -d "$p" ] && find "$p" -maxdepth 3 -type f -path "*/device_*/*.npy" | head -n 1 | grep -q .; then
       DATASET_DIR="$p"
       break
     fi
@@ -66,12 +76,17 @@ if [ -z "$DATASET_DIR" ]; then
 fi
 
 if [ -z "$DATASET_DIR" ]; then
-  DATASET_DIR="$(find /teamspace -maxdepth 5 -type d \( -iname '*lora*' -o -iname '*rffi*' -o -iname '*dataset*' \) 2>/dev/null | head -n 1 || true)"
+  FIRST_SAMPLE="$(find /teamspace -maxdepth 8 -type f -path "*/device_*/*.npy" 2>/dev/null | head -n 1 || true)"
+  if [ -n "$FIRST_SAMPLE" ]; then
+    DATASET_DIR="$(dirname "$(dirname "$FIRST_SAMPLE")")"
+  fi
 fi
 
 if [ -z "$DATASET_DIR" ]; then
   echo "No LoRa dataset directory found under /teamspace"
-  echo "Run: find /teamspace -maxdepth 4 -type d | grep -Ei 'lora|dataset|rffi'"
+  echo "Run one of these:"
+  echo "  find /teamspace -maxdepth 8 -type f -path '*/device_*/*.npy' | head"
+  echo "  export DATASET_DIR=/absolute/path/to/dataset_root"
   exit 1
 fi
 
