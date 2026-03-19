@@ -47,15 +47,12 @@ Recommended order for smoke testing:
 4. `python scripts/train.py --config configs/smoke_l4.yaml --dry-run --disable-wandb`
 5. `python scripts/train.py --config configs/smoke_l4.yaml --disable-wandb`
 
-If auto-detection does not find your dataset path on Lightning, set it explicitly:
+If your real dataset is in `.bin` format (e.g., DataPort raw captures), use:
 
-`export DATASET_DIR="/path/to/root_with_device_folders"`
+1. `python scripts/convert_bin_to_npy.py --input-dir <bin_root> --output-dir data/converted_npy`
+2. set `data.root_dir` to `data/converted_npy` in `configs/smoke_l4.yaml`
 
-Required dataset layout:
-
-- `<root>/device_0/*.npy`
-- `<root>/device_1/*.npy`
-- ...
+The Lightning smoke runner `scripts/run_lightning_smoke.sh` also attempts this conversion automatically when no `device_*/.npy` layout is found.
 
 ## Notes
 

@@ -83,9 +83,28 @@ if [ -z "$DATASET_DIR" ]; then
 fi
 
 if [ -z "$DATASET_DIR" ]; then
+  FIRST_BIN="$(find /teamspace -maxdepth 8 -type f -iname "*.bin" 2>/dev/null | head -n 1 || true)"
+  if [ -n "$FIRST_BIN" ]; then
+    BIN_ROOT="$(dirname "$FIRST_BIN")"
+    CONVERT_OUT="$REPO_DIR/data/converted_npy"
+    echo "Found raw .bin files. Converting real captures to .npy chunks for smoke test..."
+    python scripts/convert_bin_to_npy.py \
+      --input-dir "$BIN_ROOT" \
+      --output-dir "$CONVERT_OUT" \
+      --samples-per-chunk 4096 \
+      --dtype int16 \
+      --max-chunks-per-device 200
+    if find "$CONVERT_OUT" -maxdepth 3 -type f -path "*/device_*/*.npy" | head -n 1 | grep -q .; then
+      DATASET_DIR="$CONVERT_OUT"
+    fi
+  fi
+fi
+
+if [ -z "$DATASET_DIR" ]; then
   echo "No LoRa dataset directory found under /teamspace"
   echo "Run one of these:"
   echo "  find /teamspace -maxdepth 8 -type f -path '*/device_*/*.npy' | head"
+  echo "  find /teamspace -maxdepth 8 -type f -iname '*.bin' | head"
   echo "  export DATASET_DIR=/absolute/path/to/dataset_root"
   exit 1
 fi
