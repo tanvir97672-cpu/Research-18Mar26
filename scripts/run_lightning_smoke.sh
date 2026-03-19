@@ -130,10 +130,13 @@ fi
 
 if [ -z "$DATASET_DIR" ]; then
   echo "No LoRa dataset directory found under /teamspace"
+  echo "Dataset source links:"
+  echo "  https://ieee-dataport.org/documents/rf-fingerprinting-lora-device-authentication-dataset-collection-and-characterization"
+  echo "  https://doi.org/10.21227/azwe-ca87"
   echo "Run one of these:"
   echo "  find /teamspace -maxdepth 8 -type f -path '*/device_*/*.npy' | head"
   echo "  find /teamspace -maxdepth 8 -type f -iname '*.bin' | head"
-  echo "  (optional) export DATASET_TAR_URL='https://.../dataset.tar.gz'"
+  echo "  (optional) export DATASET_TAR_URL='<direct .tar.gz/.tgz/.tar URL>'"
   echo "  export DATASET_DIR=/absolute/path/to/dataset_root"
   exit 1
 fi

@@ -2,6 +2,15 @@
 
 This codebase is prepared for Lightning AI with an Nvidia L4 GPU and follows a strict real-data-only policy.
 
+## Dataset Links (Added)
+
+- IEEE DataPort (LoRa RFFI dataset page):
+	https://ieee-dataport.org/documents/rf-fingerprinting-lora-device-authentication-dataset-collection-and-characterization
+- Dataset DOI:
+	https://doi.org/10.21227/azwe-ca87
+- Reference paper (JRFFP-SC):
+	https://arxiv.org/abs/2501.15391
+
 ## What is implemented
 
 - Open-set pipeline with known-device ID and unknown-device rejection.
