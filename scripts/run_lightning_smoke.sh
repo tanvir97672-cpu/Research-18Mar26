@@ -34,6 +34,12 @@ PY
 wandb login --relogin "$WANDB_API_KEY"
 
 DATASET_DIR="${DATASET_DIR:-}"
+
+# Ignore placeholder values often copied from examples.
+if [[ "$DATASET_DIR" == *"your/actual"* ]] || [[ "$DATASET_DIR" == "/your/actual/lora_dataset_folder" ]]; then
+  DATASET_DIR=""
+fi
+
 if [ -z "$DATASET_DIR" ]; then
   for p in \
     /teamspace/datasets/lora_2025 \
@@ -48,12 +54,17 @@ if [ -z "$DATASET_DIR" ]; then
 fi
 
 if [ -z "$DATASET_DIR" ]; then
-  DATASET_DIR="$(find /teamspace -maxdepth 4 -type d -iname '*lora*' 2>/dev/null | head -n 1 || true)"
+  SAMPLE_NPY="$(find /teamspace -maxdepth 8 -type f -path '*/device_*/*.npy' 2>/dev/null | head -n 1 || true)"
+  if [ -n "$SAMPLE_NPY" ]; then
+    DATASET_DIR="$(dirname "$(dirname "$SAMPLE_NPY")")"
+  fi
 fi
 
 if [ -z "$DATASET_DIR" ]; then
   echo "No LoRa dataset directory found under /teamspace"
-  echo "Run: find /teamspace -maxdepth 4 -type d | grep -Ei 'lora|dataset|rffi'"
+  echo "Expected layout: <root>/device_0/*.npy, <root>/device_1/*.npy, ..."
+  echo "Try: find /teamspace -maxdepth 8 -type f -path '*/device_*/*.npy' | head"
+  echo "Then rerun with: export DATASET_DIR=\"<root_that_contains_device_folders>\""
   exit 1
 fi
 

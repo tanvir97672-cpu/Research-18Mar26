@@ -47,6 +47,16 @@ Recommended order for smoke testing:
 4. `python scripts/train.py --config configs/smoke_l4.yaml --dry-run --disable-wandb`
 5. `python scripts/train.py --config configs/smoke_l4.yaml --disable-wandb`
 
+If auto-detection does not find your dataset path on Lightning, set it explicitly:
+
+`export DATASET_DIR="/path/to/root_with_device_folders"`
+
+Required dataset layout:
+
+- `<root>/device_0/*.npy`
+- `<root>/device_1/*.npy`
+- ...
+
 ## Notes
 
 - No synthetic augmentations are used by this codebase.

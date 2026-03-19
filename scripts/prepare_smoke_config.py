@@ -24,7 +24,8 @@ def main() -> None:
     if not has_npy_layout(dataset_dir):
         raise SystemExit(
             "Dataset directory does not match expected layout device_*/.npy files. "
-            f"Checked: {dataset_dir}"
+            f"Checked: {dataset_dir}. "
+            "Run: find <dataset_root> -maxdepth 3 -type f -path '*/device_*/*.npy' | head"
         )
 
     cfg_path = Path(args.config)
