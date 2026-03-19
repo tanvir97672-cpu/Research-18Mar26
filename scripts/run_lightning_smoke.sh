@@ -2,7 +2,13 @@
 set -euo pipefail
 
 WORKDIR="/teamspace/studios/this_studio"
-REPO_DIR="$WORKDIR/Research 18Mar26"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# If script is not inside a git repo, fall back to canonical workspace clone path.
+if [ ! -d "$REPO_DIR/.git" ]; then
+  REPO_DIR="$WORKDIR/Research 18Mar26"
+fi
 
 cd "$WORKDIR"
 if [ ! -d "$REPO_DIR/.git" ]; then
