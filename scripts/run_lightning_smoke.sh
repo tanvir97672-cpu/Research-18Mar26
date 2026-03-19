@@ -12,6 +12,10 @@ fi
 cd "$REPO_DIR"
 git pull origin main
 
+# Minimal tools needed before dataset resolution.
+python -m pip install --upgrade pip
+pip install wandb pyyaml
+
 # Optional: if you have a direct downloadable archive URL, provide DATASET_TAR_URL.
 # Example: export DATASET_TAR_URL="https://.../lora_dataset.tar.gz"
 if [ -n "${DATASET_TAR_URL:-}" ]; then
@@ -109,10 +113,8 @@ if [ -z "$DATASET_DIR" ]; then
     CONVERT_OUT="$REPO_DIR/data/converted_npy"
     echo "Found raw .bin files. Converting real captures to .npy chunks for smoke test..."
 
-    # Install deps only when we have candidate real data.
-    python -m pip install --upgrade pip
+    # Install full deps only when we have candidate real data.
     python -m pip install -r requirements.txt
-    pip install wandb pyyaml
 
     python scripts/convert_bin_to_npy.py \
       --input-dir "$BIN_ROOT" \
@@ -136,10 +138,8 @@ if [ -z "$DATASET_DIR" ]; then
   exit 1
 fi
 
-# Install deps only when a usable real dataset path is available.
-python -m pip install --upgrade pip
+# Install full deps only when a usable real dataset path is available.
 python -m pip install -r requirements.txt
-pip install wandb pyyaml
 
 python scripts/prepare_smoke_config.py --dataset-dir "$DATASET_DIR" --config configs/smoke_l4.yaml
 
