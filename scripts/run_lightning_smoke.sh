@@ -12,9 +12,18 @@ fi
 cd "$REPO_DIR"
 git pull origin main
 
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-pip install wandb pyyaml
+# Optional: if you have a direct downloadable archive URL, provide DATASET_TAR_URL.
+# Example: export DATASET_TAR_URL="https://.../lora_dataset.tar.gz"
+if [ -n "${DATASET_TAR_URL:-}" ]; then
+  mkdir -p "$REPO_DIR/data/raw_download"
+  ARCHIVE_PATH="$REPO_DIR/data/raw_download/dataset_archive.tar.gz"
+  if [ ! -f "$ARCHIVE_PATH" ]; then
+    echo "Downloading dataset archive from DATASET_TAR_URL..."
+    curl -L "$DATASET_TAR_URL" -o "$ARCHIVE_PATH"
+  fi
+  mkdir -p "$REPO_DIR/data/raw_download/extracted"
+  tar -xzf "$ARCHIVE_PATH" -C "$REPO_DIR/data/raw_download/extracted"
+fi
 
 NETRC_FILE="${HOME}/.netrc"
 if [ -z "${WANDB_API_KEY:-}" ]; then
@@ -66,7 +75,8 @@ if [ -z "$DATASET_DIR" ]; then
   for p in \
     /teamspace/datasets/lora_2025 \
     /teamspace/studios/this_studio/datasets/lora_2025 \
-    /teamspace/studios/this_studio/data/lora_2025
+    /teamspace/studios/this_studio/data/lora_2025 \
+    "$REPO_DIR/data/raw_download/extracted"
   do
     if [ -d "$p" ] && find "$p" -maxdepth 3 -type f -path "*/device_*/*.npy" | head -n 1 | grep -q .; then
       DATASET_DIR="$p"
@@ -83,11 +93,27 @@ if [ -z "$DATASET_DIR" ]; then
 fi
 
 if [ -z "$DATASET_DIR" ]; then
+  FIRST_SAMPLE_LOCAL="$(find "$REPO_DIR/data" -maxdepth 8 -type f -path "*/device_*/*.npy" 2>/dev/null | head -n 1 || true)"
+  if [ -n "$FIRST_SAMPLE_LOCAL" ]; then
+    DATASET_DIR="$(dirname "$(dirname "$FIRST_SAMPLE_LOCAL")")"
+  fi
+fi
+
+if [ -z "$DATASET_DIR" ]; then
   FIRST_BIN="$(find /teamspace -maxdepth 8 -type f -iname "*.bin" 2>/dev/null | head -n 1 || true)"
+  if [ -z "$FIRST_BIN" ]; then
+    FIRST_BIN="$(find "$REPO_DIR/data" -maxdepth 8 -type f -iname "*.bin" 2>/dev/null | head -n 1 || true)"
+  fi
   if [ -n "$FIRST_BIN" ]; then
     BIN_ROOT="$(dirname "$FIRST_BIN")"
     CONVERT_OUT="$REPO_DIR/data/converted_npy"
     echo "Found raw .bin files. Converting real captures to .npy chunks for smoke test..."
+
+    # Install deps only when we have candidate real data.
+    python -m pip install --upgrade pip
+    python -m pip install -r requirements.txt
+    pip install wandb pyyaml
+
     python scripts/convert_bin_to_npy.py \
       --input-dir "$BIN_ROOT" \
       --output-dir "$CONVERT_OUT" \
@@ -105,9 +131,15 @@ if [ -z "$DATASET_DIR" ]; then
   echo "Run one of these:"
   echo "  find /teamspace -maxdepth 8 -type f -path '*/device_*/*.npy' | head"
   echo "  find /teamspace -maxdepth 8 -type f -iname '*.bin' | head"
+  echo "  (optional) export DATASET_TAR_URL='https://.../dataset.tar.gz'"
   echo "  export DATASET_DIR=/absolute/path/to/dataset_root"
   exit 1
 fi
+
+# Install deps only when a usable real dataset path is available.
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+pip install wandb pyyaml
 
 python scripts/prepare_smoke_config.py --dataset-dir "$DATASET_DIR" --config configs/smoke_l4.yaml
 
